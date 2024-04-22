@@ -29,8 +29,9 @@ from .source.ControlCom.ldm.models.diffusion.plms import PLMSSampler
 from .source.ControlCom.ldm.data.open_images_control import get_tensor, get_tensor_clip, get_bbox_tensor, bbox2mask, tensor2numpy
 
 cur_dir   = os.path.dirname(os.path.abspath(__file__))
-model_set = ['ControlCom'] 
-task_set  = ['blending', 'harmonization'] # 'viewsynthesis', 'composition'
+model_dir = os.environ.get('LIBCOM_MODEL_DIR',cur_dir)
+model_set = ['ControlCom', 'ControlCom_blend_harm', 'ControlCom_view_comp'] 
+task_set  = ['blending', 'harmonization', 'viewsynthesis', 'composition']
 
 class ControlComModel:
     """
@@ -38,7 +39,7 @@ class ControlComModel:
 
     Args:
         device (str | torch.device): gpu id
-        model_type (str): predefined model type
+        model_type (str): predefined model type. "ControlCom" refers to the version trained on all four tasks comprehensively, covering a wide range of domains or objectives. "ControlCom_blend_harm" fine-tunes the "full" version specifically for image blending and harmonization tasks. "ControlCom_view_comp" fine-tunes the "full" version to excel in view synthesis and generative composition tasks.
         kwargs (dict): sampler='ddim' (default) or 'plms', other parameters for building model
     
     Examples:
@@ -53,7 +54,7 @@ class ControlComModel:
         >>>     fg_img  = test_dir + 'foreground/' + img_names[i]
         >>>     bbox    = bboxes[i]
         >>>     mask    = test_dir + 'foreground_mask/' + img_names[i]
-        >>>     net     = ControlComModel(device=0)
+        >>>     net     = ControlComModel(device=0, model_type="ControlCom")
         >>>     comp    = net(bg_img, fg_img, bbox, mask, task=['blending', 'harmonization'])
         >>>     bg_img  = draw_bbox_on_image(bg_img, bbox)
         >>>     grid_img = make_image_grid([bg_img, fg_img, comp[0], comp[1]])
@@ -73,7 +74,7 @@ class ControlComModel:
         self.model_type = model_type
         self.option = kwargs
         
-        weight_path = os.path.join(cur_dir, 'pretrained_models', 'ControlCom.pth')
+        weight_path = os.path.join(cur_dir, 'pretrained_models', f'{self.model_type}.pth')
         download_pretrained_model(weight_path)
         
         self.device = check_gpu_device(device)
@@ -84,7 +85,7 @@ class ControlComModel:
         pl_sd  = torch.load(weight_path, map_location="cpu")
         sd     = pl_sd["state_dict"]
         config = OmegaConf.load(os.path.join(cur_dir, 'source/ControlCom/configs/controlcom.yaml'))
-        clip_path = os.path.join(cur_dir, '../shared_pretrained_models', 'openai-clip-vit-large-patch14')
+        clip_path = os.path.join(model_dir, '../shared_pretrained_models', 'openai-clip-vit-large-patch14')
         download_entire_folder(clip_path)
         config.model.params.cond_stage_config.params.version = clip_path
         model  = instantiate_from_config(config.model)
@@ -181,6 +182,10 @@ class ControlComModel:
                 indicator.append([0,0])
             elif t == 'harmonization':
                 indicator.append([1,0])
+            elif t == 'viewsynthesis':
+                indicator.append([0,1])
+            else:
+                indicator.append([1,1])
         return indicator
                 
     @torch.no_grad()
@@ -195,7 +200,7 @@ class ControlComModel:
             foreground_image (str | numpy.ndarray): The path to foreground image or the background image in ndarray form.
             bbox (list): The bounding box which indicates the foreground's location in the background. [x1, y1, x2, y2].
             foreground_mask (None | str | numpy.ndarray): Mask of foreground image which indicates the foreground object region in the foreground image. default: None.
-            task (str | list of str): 'blending', 'harmonization', ['blending', 'harmonization']: Task types, including image blending, image harmonization. default: 'blending'.
+            task (str | list of str): 'blending', 'harmonization', 'viewsynthesis', 'composition' | ['blending', 'harmonization']: Task types, including image blending, image harmonization, view synthesis, generative composition. default: 'blending'.
             num_samples (int): Number of images to be generated for each task. default: 1.
             sample_steps (int): Number of denoising steps. The recommended setting is 25 for PLMS sampler and 50 for DDIM sampler. default: 50.
             guidance_scale (int): Scale in classifier-free guidance (minimum: 1; maximum: 20). default: 5.

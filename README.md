@@ -17,7 +17,7 @@
 
 
 ## Introduction
-**_libcom_ (the library of image composition) is an image composition toolbox.** The goal of image composition is inserting one foreground into a background image to get a realistic composite image, by addressing the inconsistencies (appearance, geometry, and semantic inconsistency) between foreground and background. Generally speaking, image composition could be used to combine the visual elements from different images.
+**_libcom_ (the library of image composition) is an image composition toolbox.** The goal of image composition (object insertion) is inserting one foreground into a background image to get a realistic composite image, by addressing the inconsistencies (appearance, geometry, and semantic inconsistency) between foreground and background. Generally speaking, image composition could be used to combine the visual elements from different images.
 <div align="center">
 </br>
 <img src="https://raw.githubusercontent.com/bcmi/libcom/main/resources/image_composition_task.gif" width="600" />
@@ -38,8 +38,10 @@
 - **HarmonyScoreModel** evaluates the harmony level between foreground and background in a composite image.
 - **InharmoniousLocalizationModel** localizes the inharmonious region in a synthetic image.
 - **FOSScoreModel** evaluates the compatibility between foreground and background in a composite image in terms of geometry and semantics.
-- **ControlComModel** is a generative image composition model, which unifies image blending and image harmonization in one diffusion model. 
 - **ShadowGenerationModel** generates plausible shadow for the inserted object in a composite image. 
+- **ControlComModel** is a generative image composition model which unifies image blending and image harmonization. The generated foreground has high fidelity. 
+- **ObjectStitchModel** is another generative image composition model which can adjust the pose and view of foreground, but the fidelity of generated foreground is worse than ControlComModel. 
+
 
 **For the detailed method descriptions, code examples, visualization results, and performance comments, please refer to our [[documents]](https://libcom.readthedocs.io/en/latest/).**
 
